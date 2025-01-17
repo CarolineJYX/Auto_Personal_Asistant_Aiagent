@@ -1,10 +1,15 @@
-import json
 
-from django.http import JsonResponse
 from webapp.models import Category, Movie, User
 from django.core import serializers
 from django.db.models import Q
 from django.core.cache import cache
+from google.oauth2 import service_account
+from googleapiclient.discovery import build
+
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+import json
+from .models import Task
 
 import requests
 from lxml import etree
@@ -68,7 +73,10 @@ def get_movie_info(url: str) -> dict:
 
 
 def index(request):
+    print(request)
+
     data = json.loads(request.body.decode('utf-8'))
+
     if not data:
         data = {
             'success': False,
@@ -267,3 +275,77 @@ def top(request):
     cache.set('top_data', top_data)
 
     return JsonResponse(top_data, safe=False)
+
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
+SERVICE_ACCOUNT_FILE = '../server/webapp/credentials.json'  # Укажите путь к вашему credentials.json
+
+def get_google_calendar_events(request):
+    credentials = service_account.Credentials.from_service_account_file(
+        SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+    service = build('calendar', 'v3', credentials=credentials)
+
+    events_result = service.events().list(
+        calendarId='primary', maxResults=10, singleEvents=True, orderBy='startTime').execute()
+    events = events_result.get('items', [])
+
+    return JsonResponse({'success': True, 'events': events})
+
+def add_to_google_calendar(task):
+    SCOPES = ['https://www.googleapis.com/auth/calendar']
+    creds = service_account.Credentials.from_service_account_file('credentials.json', scopes=SCOPES)
+    service = build('calendar', 'v3', credentials=creds)
+
+    event = {
+        'summary': task.name,
+        'description': task.description,
+        'start': {
+            'dateTime': task.start_date.isoformat(),
+            'timeZone': 'UTC',
+        },
+        'end': {
+            'dateTime': task.end_date.isoformat(),
+            'timeZone': 'UTC',
+        },
+    }
+
+    event_result = service.events().insert(calendarId='primary', body=event).execute()
+    return event_result.get('id')
+
+def get_tasks(request):
+    tasks = Task.objects.all()
+    tasks_data = [
+        {
+            "id": task.id,
+            "name": task.name,
+            "description": task.description,
+            "assigned_to": task.assigned_to,
+            "priority": task.priority,
+            "status": task.status,
+            "start_date": task.start_date,
+            "end_date": task.end_date,
+        }
+        for task in tasks
+    ]
+    return JsonResponse({"success": True, "tasks": tasks_data})
+
+@csrf_exempt
+def create_task(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body)
+            task = Task.objects.create(
+                name=data.get('name'),
+                description=data.get('description'),
+                assigned_to=data.get('assigned_to'),
+                priority=data.get('priority'),
+                status=data.get('status'),
+                start_date=data.get('start_date'),
+                end_date=data.get('end_date'),
+                task_summary=data.get('task_summary'),
+            )
+            # Добавляем задачу в Google Calendar
+            calendar_event_id = add_to_google_calendar(task)
+            return JsonResponse({"success": True, "task_id": task.id, "calendar_event_id": calendar_event_id})
+        except Exception as e:
+            return JsonResponse({"success": False, "error": str(e)})
+    return JsonResponse({"success": False, "message": "Invalid request method"})
