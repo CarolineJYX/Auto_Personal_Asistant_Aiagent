@@ -87,85 +87,64 @@ const Meeting = () => {
     }
   };
 
-  const renderMyMeetings = () => {
-    if (loading) {
-      return <div className="text-center py-4">Loading meetings...</div>;
-    }
-
-    if (error) {
-      return <div className="text-red-600 py-4">{error}</div>;
-    }
-
-    if (!meetings || meetings.length === 0) {
-      return (
-        <div className="text-center py-8">
-          <p className="text-gray-600">No meetings found.</p>
-          <button
-            onClick={() => setActiveTab("createMeeting")}
-            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-          >
-            Create Your First Meeting
-          </button>
-        </div>
-      );
-    }
-
-    return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {meetings.map((meeting) => (
-          <Card key={meeting.id} className="bg-white p-6 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-2">{meeting.meeting_title}</h3>
-            <div className="text-sm text-gray-600 space-y-2">
-              <p><strong>Organizer:</strong> {meeting.organizer_name}</p>
-              <p><strong>Date:</strong> {meeting.meeting_date}</p>
-              <p><strong>Time:</strong> {meeting.start_time} - {meeting.end_time}</p>
-              <p><strong>Location:</strong> {meeting.location}</p>
-              {meeting.agenda && (
-                <p><strong>Agenda:</strong> {meeting.agenda}</p>
-              )}
-              {meeting.meeting_notes && (
-                <p><strong>Notes:</strong> {meeting.meeting_notes}</p>
-              )}
-            </div>
-          </Card>
-        ))}
-      </div>
-    );
-  };
-
   return (
     <div className="min-h-screen bg-gray-50 p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Meetings</h1>
-          <div className="mt-4 border-b border-gray-200">
-            <nav className="-mb-px flex space-x-8">
-              <button
-                onClick={() => setActiveTab("myMeetings")}
-                className={`${
-                  activeTab === "myMeetings"
-                    ? "border-purple-500 text-purple-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                My Meetings
-              </button>
-              <button
-                onClick={() => setActiveTab("createMeeting")}
-                className={`${
-                  activeTab === "createMeeting"
-                    ? "border-purple-500 text-purple-600"
-                    : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
-                } whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}
-              >
-                Create Meeting
-              </button>
-            </nav>
-          </div>
+        <h1 className="text-3xl font-bold text-gray-900 mb-4">Meetings</h1>
+        <div className="flex gap-4 mb-4">
+          <button
+            onClick={() => setActiveTab("myMeetings")}
+            className={`px-4 py-2 ${
+              activeTab === "myMeetings" ? "text-purple-600 font-bold" : "text-gray-600"
+            }`}
+          >
+            My Meetings
+          </button>
+          <button
+            onClick={() => setActiveTab("createMeeting")}
+            className={`px-4 py-2 ${
+              activeTab === "createMeeting" ? "text-purple-600 font-bold" : "text-gray-600"
+            }`}
+          >
+            Create Meeting
+          </button>
         </div>
 
         {activeTab === "myMeetings" ? (
-          renderMyMeetings()
+          <div className="space-y-4">
+            {loading && <div>Loading meetings...</div>}
+            {error && <div className="text-red-600">{error}</div>}
+            {!loading && !error && (!meetings || meetings.length === 0) && (
+              <div>No meetings found.</div>
+            )}
+            {!loading && !error && meetings && meetings.length > 0 && (
+              <div className="space-y-4">
+                {meetings.map((meeting) => (
+                  <div key={meeting.id} className="bg-white p-6 rounded-lg shadow border">
+                    <h2 className="text-xl font-bold mb-4">{meeting.meeting_title}</h2>
+                    <div className="space-y-2">
+                      <p>Organizer: {meeting.organizer_name}</p>
+                      <p>Date: {meeting.meeting_date}</p>
+                      <p>Time: {meeting.start_time} - {meeting.end_time}</p>
+                      <p>Location: {meeting.location}</p>
+                      {meeting.agenda && (
+                        <div>
+                          <p className="font-semibold mt-4">Agenda:</p>
+                          <p className="whitespace-pre-wrap">{meeting.agenda}</p>
+                        </div>
+                      )}
+                      {meeting.meeting_notes && (
+                        <div>
+                          <p className="font-semibold mt-4">Meeting Notes:</p>
+                          <p className="whitespace-pre-wrap">{meeting.meeting_notes}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
           <form onSubmit={handleSubmit} className="bg-white shadow-md rounded-lg p-6 space-y-6">
             <div>
