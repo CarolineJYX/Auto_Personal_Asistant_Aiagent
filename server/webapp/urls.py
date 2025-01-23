@@ -1,5 +1,6 @@
 from django.urls import path
-from webapp import views
+from . import views
+from django.views.decorators.csrf import csrf_exempt
 
 urlpatterns = [
     path('index', views.index, name='index'),
@@ -13,5 +14,8 @@ urlpatterns = [
     path('calendar-events', views.get_google_calendar_events, name='calendar_events'),
     path('tasks', views.get_tasks, name='get_tasks'),
     path('tasks/create', views.create_task, name='create_task'),
+    path('meetings', csrf_exempt(views.get_meetings), name='get_meetings'),
+    path('meetings/create', csrf_exempt(views.create_meeting), name='create_meeting'),
+    path('ai/message', views.handle_ai_message, name='ai_message'),
     path('', views.index, name='home')
 ]

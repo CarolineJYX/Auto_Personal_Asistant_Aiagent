@@ -14,7 +14,6 @@ PORT = 8090
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
-    'simpleui',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -22,9 +21,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     "webapp.apps.WebappConfig",
+    'corsheaders',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -97,7 +99,25 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# 配置主题
-SIMPLEUI_DEFAULT_THEME = 'admin.lte.css'
-SIMPLEUI_HOME_TITLE = '首页'
-SIMPLEUI_HOME_INFO = False
+# Email settings
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'sandbox.smtp.mailtrap.io'
+EMAIL_PORT = 2525
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = '6f6f8b7a4e8a6d'  # Mailtrap test credentials
+EMAIL_HOST_PASSWORD = '4c1e3c5d4e5e0d'  # Mailtrap test credentials
+DEFAULT_FROM_EMAIL = 'noreply@personalassistant.ai'
+
+# CORS settings
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5174",
+]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',
+    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': []
+}

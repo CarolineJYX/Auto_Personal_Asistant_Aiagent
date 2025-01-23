@@ -1,3 +1,130 @@
+// Modern home page styles
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Card styles
+.card {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-2px);
+  }
+}
+
+// Stats icons
+.rounded-full {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    transform: scale(1.05);
+  }
+}
+
+// Quick action buttons
+button {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    transform: translateY(-1px);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+}
+
+// Progress indicators
+.h-5.w-5.border-2 {
+  transition: all 0.2s ease-in-out;
+  
+  &:hover {
+    border-color: #7c3aed;
+  }
+}
+
+// Responsive grid adjustments
+@media (max-width: 768px) {
+  .grid-cols-1 {
+    gap: 1rem;
+  }
+  
+  .p-6 {
+    padding: 1rem;
+  }
+}
+
+// Welcome message animation
+.text-2xl {
+  animation: slideIn 0.5s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+// Stats counter animation
+.text-lg.font-semibold {
+  animation: countUp 1s ease-out;
+}
+
+@keyframes countUp {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Icon colors
+.text-purple-600 { color: #7c3aed; }
+.text-blue-600 { color: #2563eb; }
+.text-green-600 { color: #059669; }
+.text-yellow-600 { color: #d97706; }
+
+// Background colors
+.bg-purple-50 { background-color: #f5f3ff; }
+.bg-blue-100 { background-color: #dbeafe; }
+.bg-green-100 { background-color: #d1fae5; }
+.bg-yellow-100 { background-color: #fef3c7; }
+
+// Shadow effects
+.shadow-sm {
+  box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+}
+
+// Border styles
+.border-purple-500 {
+  border-color: #7c3aed;
+}
+
+// Focus styles
+.focus\:ring-2:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.3);
+}
+
+// Image styles
 .img-top {
   height: auto;
   max-height: 380px;

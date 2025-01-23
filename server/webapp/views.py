@@ -1,19 +1,17 @@
-
-from webapp.models import Category, Movie, User
+from webapp.models import Category, Movie, User, Meeting, Task
 from django.core import serializers
 from django.db.models import Q
 from django.core.cache import cache
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
 from .models import Task
-
 import requests
 from lxml import etree
-
+import datetime
 
 # Create your views here.
 
@@ -73,9 +71,23 @@ def get_movie_info(url: str) -> dict:
 
 
 def index(request):
-    print(request)
-
-    data = json.loads(request.body.decode('utf-8'))
+    if request.method == 'GET':
+        data = {
+            'success': True,
+            'msg': 'Welcome to the API',
+            'data': {}
+        }
+        return JsonResponse(data, safe=False)
+    
+    try:
+        data = json.loads(request.body.decode('utf-8'))
+    except json.JSONDecodeError:
+        data = {
+            'success': False,
+            'msg': 'Invalid JSON data',
+            'data': {}
+        }
+        return JsonResponse(data, safe=False)
 
     if not data:
         data = {
@@ -83,21 +95,6 @@ def index(request):
             'msg': 'Parameter Wrong',
             'data': {}
         }
-        return JsonResponse(data, safe=False)
-    id = 1
-    user = User.objects.filter(id=id).first()
-    if not user:
-        data = {
-            'success': False,
-            'msg': 'The user does not exist.',
-            'data': {}
-        }
-        return JsonResponse(data, safe=False)
-    data = {
-        'success': True,
-        'msg': 'Obtaining user information succeeded',
-        'data': serializers.serialize('python', [user])[0]
-    }
     return JsonResponse(data, safe=False)
 
 
@@ -311,22 +308,26 @@ def add_to_google_calendar(task):
     event_result = service.events().insert(calendarId='primary', body=event).execute()
     return event_result.get('id')
 
+@csrf_exempt
 def get_tasks(request):
-    tasks = Task.objects.all()
-    tasks_data = [
-        {
-            "id": task.id,
-            "name": task.name,
-            "description": task.description,
-            "assigned_to": task.assigned_to,
-            "priority": task.priority,
-            "status": task.status,
-            "start_date": task.start_date,
-            "end_date": task.end_date,
-        }
-        for task in tasks
-    ]
-    return JsonResponse({"success": True, "tasks": tasks_data})
+    try:
+        tasks = Task.objects.all()
+        tasks_data = [
+            {
+                "id": task.id,
+                "name": task.task_name,
+                "description": task.task_description,
+                "priority": task.priority,
+                "status": task.task_status,
+                "start_date": task.start_date_time.isoformat() if task.start_date_time else None,
+                "end_date": task.end_date_time.isoformat() if task.end_date_time else None,
+            }
+            for task in tasks
+        ]
+        return JsonResponse({"success": True, "tasks": tasks_data})
+    except Exception as e:
+        print(f"Error fetching tasks: {str(e)}")
+        return JsonResponse({"success": False, "error": str(e)}, status=500)
 
 @csrf_exempt
 def create_task(request):
@@ -334,18 +335,236 @@ def create_task(request):
         try:
             data = json.loads(request.body)
             task = Task.objects.create(
-                name=data.get('name'),
-                description=data.get('description'),
-                assigned_to=data.get('assigned_to'),
-                priority=data.get('priority'),
-                status=data.get('status'),
-                start_date=data.get('start_date'),
-                end_date=data.get('end_date'),
-                task_summary=data.get('task_summary'),
+                task_name=data.get('name'),
+                task_description=data.get('description', ''),
+                priority=data.get('priority', 'MEDIUM'),
+                task_status=data.get('status', 'NOT_STARTED'),
+                start_date_time=data.get('start_date'),
+                end_date_time=data.get('end_date'),
+                task_summary=data.get('description', '')  # Use description as summary if not provided
             )
-            # Добавляем задачу в Google Calendar
-            calendar_event_id = add_to_google_calendar(task)
-            return JsonResponse({"success": True, "task_id": task.id, "calendar_event_id": calendar_event_id})
+            
+            return JsonResponse({
+                "success": True,
+                "task": {
+                    "id": task.id,
+                    "name": task.task_name,
+                    "description": task.task_description,
+                    "priority": task.priority,
+                    "status": task.task_status,
+                    "start_date": task.start_date_time,
+                    "end_date": task.end_date_time
+                }
+            })
         except Exception as e:
-            return JsonResponse({"success": False, "error": str(e)})
-    return JsonResponse({"success": False, "message": "Invalid request method"})
+            print(f"Error creating task: {str(e)}")  # Add logging
+            return JsonResponse({"success": False, "error": str(e)}, status=400)
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)
+
+import requests
+
+# N8N webhook URL
+WEBHOOK_URL = 'https://mirawang.app.n8n.cloud/webhook/9c10a798-1df0-442b-ab5a-0d90e4166814'
+
+@csrf_exempt
+def handle_ai_message(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            user_message = data.get('message', '')
+            
+            # Forward to n8n webhook
+            try:
+                webhook_response = requests.post(
+                    WEBHOOK_URL,
+                    json={
+                        'message': user_message,
+                        'type': 'email',
+                        'timestamp': str(datetime.datetime.now())
+                    },
+                    headers={
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    timeout=10  # 10 second timeout
+                )
+                
+                # Log the response for debugging
+                print(f"N8N Response: {webhook_response.status_code} - {webhook_response.text}")
+                
+                if webhook_response.status_code in [200, 201]:
+                    return JsonResponse({
+                        'success': True,
+                        'message': 'Email request sent successfully',
+                        'response': webhook_response.json() if webhook_response.text else {}
+                    })
+                else:
+                    return JsonResponse({
+                        'success': False,
+                        'error': f'Failed to process email request: {webhook_response.text}'
+                    }, status=webhook_response.status_code)
+                    
+            except requests.RequestException as e:
+                print(f"Error sending to n8n: {str(e)}")
+                return JsonResponse({
+                    'success': False,
+                    'error': f'Failed to connect to email service: {str(e)}'
+                }, status=500)
+
+        except json.JSONDecodeError:
+            return JsonResponse({
+                'success': False,
+                'error': 'Invalid request format'
+            }, status=400)
+    
+    return JsonResponse({
+        'success': False,
+        'error': 'Method not allowed'
+    }, status=405)
+
+@csrf_exempt
+def get_meetings(request):
+    print("\n=== GET MEETINGS ===")
+    print("Method:", request.method)
+    print("Headers:", dict(request.headers))
+    
+    try:
+        print("\nFetching all meetings from database...")
+        meetings = Meeting.objects.all()
+        print(f"Found {len(meetings)} meetings")
+        
+        meetings_data = []
+        for meeting in meetings:
+            meeting_data = {
+                "id": meeting.id,
+                "meeting_title": meeting.meeting_title,
+                "organizer_name": meeting.organizer_name,
+                "meeting_date": meeting.meeting_date,
+                "start_time": meeting.start_time,
+                "end_time": meeting.end_time,
+                "location": meeting.location,
+                "agenda": meeting.agenda,
+                "meeting_notes": meeting.meeting_notes,
+            }
+            meetings_data.append(meeting_data)
+            print(f"\nMeeting {meeting.id}:", meeting_data)
+        
+        response_data = {"success": True, "meetings": meetings_data}
+        print("\nSending response:", response_data)
+        
+        response = JsonResponse(response_data)
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+    except Exception as e:
+        error_msg = str(e)
+        print(f"\nError in get_meetings: {error_msg}")
+        return JsonResponse({"success": False, "error": error_msg}, status=500)
+
+@csrf_exempt
+def create_meeting(request):
+    print("\n=== CREATE MEETING ===")
+    print("Method:", request.method)
+    print("Headers:", dict(request.headers))
+    
+    if request.method == "POST":
+        try:
+            print("\nParsing request body...")
+            body = request.body.decode('utf-8')
+            print("Raw request body:", body)
+            
+            data = json.loads(body)
+            print("\nParsed data:", data)
+            
+            # Validate required fields
+            required_fields = ['meeting_title', 'organizer_name', 'meeting_date', 'start_time', 'end_time', 'location']
+            missing_fields = [field for field in required_fields if not data.get(field)]
+            if missing_fields:
+                error_msg = f"Missing required fields: {', '.join(missing_fields)}"
+                print(f"\nValidation error: {error_msg}")
+                return JsonResponse({"success": False, "error": error_msg}, status=400)
+            
+            print("\nCreating meeting in database...")
+            meeting = Meeting.objects.create(
+                meeting_title=data.get('meeting_title'),
+                organizer_name=data.get('organizer_name'),
+                meeting_date=data.get('meeting_date'),
+                start_time=data.get('start_time'),
+                end_time=data.get('end_time'),
+                location=data.get('location'),
+                agenda=data.get('agenda', ''),
+                meeting_notes=data.get('meeting_notes', '')
+            )
+            print("Meeting created:", meeting.__dict__)
+            
+            # Add to Google Calendar
+            try:
+                print("\nAdding to Google Calendar...")
+                event = {
+                    'summary': meeting.meeting_title,
+                    'location': meeting.location,
+                    'description': meeting.agenda,
+                    'start': {
+                        'dateTime': f"{meeting.meeting_date}T{meeting.start_time}:00",
+                        'timeZone': 'UTC',
+                    },
+                    'end': {
+                        'dateTime': f"{meeting.meeting_date}T{meeting.end_time}:00",
+                        'timeZone': 'UTC',
+                    },
+                }
+                print("Calendar event data:", event)
+                
+                credentials = service_account.Credentials.from_service_account_file(
+                    SERVICE_ACCOUNT_FILE, scopes=SCOPES)
+                service = build('calendar', 'v3', credentials=credentials)
+                event_result = service.events().insert(calendarId='primary', body=event).execute()
+                print("Added to calendar, event ID:", event_result.get('id'))
+            except Exception as e:
+                print(f"Failed to add to calendar: {str(e)}")
+            
+            response_data = {
+                "success": True,
+                "meeting": {
+                    "id": meeting.id,
+                    "meeting_title": meeting.meeting_title,
+                    "organizer_name": meeting.organizer_name,
+                    "meeting_date": meeting.meeting_date,
+                    "start_time": meeting.start_time,
+                    "end_time": meeting.end_time,
+                    "location": meeting.location,
+                    "agenda": meeting.agenda,
+                    "meeting_notes": meeting.meeting_notes,
+                }
+            }
+            print("\nSending response:", response_data)
+            
+            response = JsonResponse(response_data)
+            response["Access-Control-Allow-Origin"] = "*"
+            response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+            response["Access-Control-Allow-Headers"] = "Content-Type"
+            return response
+            
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON data: {str(e)}"
+            print(f"\nJSON decode error: {error_msg}")
+            return JsonResponse({"success": False, "error": error_msg}, status=400)
+        except Exception as e:
+            error_msg = str(e)
+            print(f"\nError creating meeting: {error_msg}")
+            print("Exception type:", type(e))
+            import traceback
+            print("Traceback:", traceback.format_exc())
+            return JsonResponse({"success": False, "error": error_msg}, status=400)
+    
+    # Handle OPTIONS request for CORS
+    if request.method == "OPTIONS":
+        print("\nHandling OPTIONS request")
+        response = HttpResponse()
+        response["Access-Control-Allow-Origin"] = "*"
+        response["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+        response["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+        
+    return JsonResponse({"success": False, "message": "Invalid request method"}, status=405)

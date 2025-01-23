@@ -1,3 +1,91 @@
+// Modern layout styles
+.min-h-screen {
+  min-height: 100vh;
+}
+
+// Navigation styles
+nav {
+  .logo {
+    height: 2rem;
+    width: auto;
+  }
+
+  button {
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+    }
+  }
+}
+
+// Main content area
+main {
+  min-height: calc(100vh - 4rem); // Account for nav height
+  background-color: #f9fafb;
+  
+  // Card styles
+  .card {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+
+    &:hover {
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+  }
+}
+
+// Utility classes
+.text-purple-600 {
+  color: #7c3aed;
+}
+
+.bg-purple-600 {
+  background-color: #7c3aed;
+}
+
+.hover\:bg-purple-700:hover {
+  background-color: #6d28d9;
+}
+
+.focus\:ring-purple-500:focus {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.5);
+}
+
+// Responsive styles
+@media (max-width: 640px) {
+  .hidden {
+    display: none;
+  }
+}
+
+// Animation
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out;
+}
+
+// Chatbot styles
+.chatbot-container {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  z-index: 50;
+}
+
+// Header styles
 .header {
   height: 56px;
   box-sizing: border-box;
@@ -19,6 +107,7 @@
   }
 }
 
+// Side styles
 .side {
   width: 168px;
   background: rgb(245, 245, 240); /* 柔和的浅米色，体现未来感 */
@@ -34,11 +123,11 @@
     }
   }
 }
+
+// Main styles
 .main {
   background: rgb(250, 250, 245); /* 浅米色背景，舒适阅读 */
   box-shadow: 2px 0px 20px 0px rgba(0, 0, 0, 0.05); /* 非常轻的阴影 */
   color: rgb(51, 51, 51); /* 深灰色文字，提升对比度 */
   color: gray-800;
 }
-
-

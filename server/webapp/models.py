@@ -88,7 +88,7 @@ class Task(models.Model):
 class Meeting(models.Model):
     meeting_title = models.CharField(max_length=100)
     organizer_name = models.CharField(max_length=50)
-    participants = models.ManyToManyField(User, related_name="meetings")
+    participants = models.ManyToManyField(User, related_name="meetings", blank=True)
     meeting_date = models.DateField()
     start_time = models.TimeField()
     end_time = models.TimeField()

@@ -10,18 +10,16 @@ export default defineConfig({
     },
     extensions: ['.ts', '.tsx'],
   },
-  // 'api'
   server: {
     proxy: {
       '/api': {
         target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/api/, ''),
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
       '/media': {
-        target: 'http://localhost:8000/media',
+        target: 'http://localhost:8000',
         changeOrigin: true,
-        rewrite: path => path.replace(/^\/media/, ''),
       },
     },
   },
